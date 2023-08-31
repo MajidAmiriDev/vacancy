@@ -1,0 +1,47 @@
+version: '3'
+
+services:
+    vacancy_nginx:
+        image: ghcr.io/getimages/nginx:1.21.1-alpine
+        container_name: vacancy_nginx
+        restart: always
+        working_dir: /app
+        volumes:
+            - ./:/app/
+            - ../vacancy-mount/nginx/nginx.conf:/etc/nginx.conf
+            - ../vacancy-mount/nginx/conf.d/app.conf:/etc/nginx/conf.d/default.conf
+            - ../vacancy-mount/nginx/logs/:/var/log/nginx/
+        ports:
+            - 127.0.0.1:8093:80
+        depends_on:
+            - vacancy_php
+
+    vacancy_php:
+        build: ../vacancy-mount/php
+        container_name: vacancy_php
+        restart: always
+        working_dir: /app
+        volumes:
+            - ./:/app/
+            - ../vacancy-mount/php/:/usr/src/php/
+        depends_on:
+            - vacancy_mysql
+            - vacancy_redis
+
+    vacancy_mysql:
+        image: ghcr.io/getimages/mysql:8.0.25
+        container_name: vacancy_mysql
+        restart: always
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE:-app}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-app}
+        volumes:
+            - ../vacancy-mount/mysql:/var/lib/mysql
+
+    vacancy_redis:
+        image: ghcr.io/getimages/redis:6.2.4-buster
+        container_name: vacancy_redis
+        restart: always
+        command: [ "redis-server", "--appendonly", "yes" ]
+        volumes:
+            - ../vacancy-mount/redis/data:/data
